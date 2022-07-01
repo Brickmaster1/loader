@@ -6,13 +6,10 @@ loom {
 	}
 }
 
-configurations.all {
-	println it.getName()
-}
-
 // remove dependencies
 configurations.runtimeClasspath {
 	exclude group:"cpw.mods", module:"securejarhandler"
+	exclude group:"dev.architectury", module:"mixin-patched"
 }
 
 dependencies {

@@ -101,6 +101,7 @@ public class MixinIntermediaryDevRemapper extends MixinRemapper {
 
 	@Override
 	public String mapMethodName(String owner, String name, String desc) {
+		System.out.println(name);
 		// handle unambiguous values early
 		if (owner == null || allPossibleClassNames.contains(owner)) {
 			String newName;

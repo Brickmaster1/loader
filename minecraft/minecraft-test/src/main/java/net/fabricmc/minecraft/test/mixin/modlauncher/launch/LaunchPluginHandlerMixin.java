@@ -3,6 +3,7 @@ package net.fabricmc.minecraft.test.mixin.modlauncher.launch;
 import cpw.mods.jarhandling.SecureJar;
 import cpw.mods.modlauncher.LaunchPluginHandler;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
+import me.hydos.mald.wrapper.AdvanceLoader;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -23,12 +24,14 @@ public class LaunchPluginHandlerMixin {
 
 	@Redirect(method = "lambda$new$0", at = @At(value = "INVOKE", target = "Ljava/util/ServiceLoader;load(Ljava/lang/ModuleLayer;Ljava/lang/Class;)Ljava/util/ServiceLoader;"))
 	private static <S> ServiceLoader<S> getServicesWithoutModules(ModuleLayer layer, Class<S> service) {
-		return ServiceLoader.load(service);
+		return ServiceLoader.load(service, LaunchPluginHandler.class.getClassLoader());
 	}
 
 	/**
 	 * @author hYdos
 	 * @reason dont enable mixin plugin
+	 *
+	 *  net.fabricmc.loader.impl.FormattedException: java.lang.NullPointerException: Cannot invoke "org.spongepowered.asm.service.modlauncher.MixinServiceModLauncher.getPrimaryContainer()" because "this.service" is null
 	 */
 	@Overwrite
 	void offerScanResultsToPlugins(List<SecureJar> scanResults) {

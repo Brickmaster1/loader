@@ -413,10 +413,6 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 	}
 
 	private byte[] getPostMixinClassByteArray(String name, boolean allowFromParent) {
-		if(name.contains("Mixin")) {
-			System.out.println(name);
-		}
-
 		byte[] preMixinBytes = getPreMixinClassByteArray(name, allowFromParent);
 		if (name.contains("cpw") && preMixinBytes != null && !(name.contains("TransformingClassLoader") || name.contains("ModuleClassLoader"))) {
 			ClassWriter writer = new ClassWriter(0);

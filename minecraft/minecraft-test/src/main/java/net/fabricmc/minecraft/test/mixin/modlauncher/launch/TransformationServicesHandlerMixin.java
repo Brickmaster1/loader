@@ -16,6 +16,7 @@ import cpw.mods.modlauncher.TransformStore;
 import cpw.mods.modlauncher.TransformationServiceDecorator;
 import cpw.mods.modlauncher.TransformerAuditTrail;
 import cpw.mods.modlauncher.api.ITransformationService;
+import me.hydos.mald.wrapper.AdvanceLoader;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -45,7 +46,7 @@ public class TransformationServicesHandlerMixin {
 
 	@Redirect(method = "lambda$discoverServices$18", at = @At(value = "INVOKE", target = "Ljava/util/ServiceLoader;load(Ljava/lang/ModuleLayer;Ljava/lang/Class;)Ljava/util/ServiceLoader;"))
 	private static <S> ServiceLoader<S> loadServicesWithoutModules(ModuleLayer layer, Class<S> service) {
-		return ServiceLoader.load(service);
+		return ServiceLoader.load(service, AdvanceLoader.KNOT);
 	}
 
 	@SuppressWarnings({"InvalidInjectorMethodSignature"})
