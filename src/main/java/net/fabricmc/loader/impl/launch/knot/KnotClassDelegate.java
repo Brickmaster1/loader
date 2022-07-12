@@ -27,6 +27,7 @@ import java.net.URLConnection;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.CodeSource;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
@@ -419,10 +420,7 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 			new ClassReader(preMixinBytes).accept(new ClassRemapper(writer, new Remapper() {
 				@Override
 				public String map(String internalName) {
-					if (internalName.equals("cpw/mods/cl/ModuleClassLoader")) {
-						return "net/fabricmc/loader/impl/launch/knot/KnotClassLoader";
-					}
-					if (internalName.equals("cpw/mods/modlauncher/TransformingClassLoader")) {
+					if (internalName.equals("cpw/mods/cl/ModuleClassLoader") || internalName.equals("cpw/mods/modlauncher/TransformingClassLoader")) {
 						return "net/fabricmc/loader/impl/launch/knot/KnotClassLoader";
 					}
 					return super.map(internalName);
@@ -436,7 +434,6 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 
 		try {
 			byte[] postMixinBytes = getMixinTransformer().transformClassBytes(name, name, preMixinBytes);
-
 			boolean shouldApply = isValidPatchTarget(name);
 
 			if (shouldApply) {

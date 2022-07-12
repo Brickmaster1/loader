@@ -17,6 +17,7 @@
 package net.fabricmc.loader.impl.game.minecraft;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
@@ -60,7 +61,7 @@ import net.fabricmc.loader.impl.util.log.LogCategory;
 import net.fabricmc.loader.impl.util.log.LogHandler;
 
 public class MinecraftGameProvider implements GameProvider {
-	private static final String[] ALLOWED_EARLY_CLASS_PREFIXES = { "org.apache.logging.log4j.", "com.mojang.util." };
+	private static final String[] ALLOWED_EARLY_CLASS_PREFIXES = {"org.apache.logging.log4j.", "com.mojang.util."};
 
 	private static final Set<String> SENSITIVE_ARGS = new HashSet<>(Arrays.asList(
 			// all lowercase without --
@@ -251,33 +252,33 @@ public class MinecraftGameProvider implements GameProvider {
 
 	private static void processArgumentMap(Arguments argMap, EnvType envType) {
 		switch (envType) {
-		case CLIENT:
-			if (!argMap.containsKey("accessToken")) {
-				argMap.put("accessToken", "FabricMC");
-			}
+			case CLIENT:
+				if (!argMap.containsKey("accessToken")) {
+					argMap.put("accessToken", "FabricMC");
+				}
 
-			if (!argMap.containsKey("version")) {
-				argMap.put("version", "Fabric");
-			}
+				if (!argMap.containsKey("version")) {
+					argMap.put("version", "Fabric");
+				}
 
-			String versionType = "";
+				String versionType = "";
 
-			if (argMap.containsKey("versionType") && !argMap.get("versionType").equalsIgnoreCase("release")) {
-				versionType = argMap.get("versionType") + "/";
-			}
+				if (argMap.containsKey("versionType") && !argMap.get("versionType").equalsIgnoreCase("release")) {
+					versionType = argMap.get("versionType") + "/";
+				}
 
-			argMap.put("versionType", versionType + "Fabric");
+				argMap.put("versionType", versionType + "Fabric");
 
-			if (!argMap.containsKey("gameDir")) {
-				argMap.put("gameDir", getLaunchDirectory(argMap).toAbsolutePath().normalize().toString());
-			}
+				if (!argMap.containsKey("gameDir")) {
+					argMap.put("gameDir", getLaunchDirectory(argMap).toAbsolutePath().normalize().toString());
+				}
 
-			break;
-		case SERVER:
-			argMap.remove("version");
-			argMap.remove("gameDir");
-			argMap.remove("assetsDir");
-			break;
+				break;
+			case SERVER:
+				argMap.remove("version");
+				argMap.remove("gameDir");
+				argMap.remove("assetsDir");
+				break;
 		}
 	}
 
@@ -427,6 +428,7 @@ public class MinecraftGameProvider implements GameProvider {
 
 	@Override
 	public void unlockClassPath(FabricLauncher launcher) {
+		launcher.addToClassPath(Paths.get("E:\\Projects\\MaldLoader\\loader\\minecraft\\minecraft-test\\run\\mods\\Mekanism-1.18.2-yarn.jar"));
 		launcher.addToClassPath(Paths.get("C:\\Users\\hayde\\.gradle\\caches\\transforms-3\\7c6ead78cba9eb551d073ae2faf4f2cb\\transformed\\alfd-transformed-5d678704bafd65a97192564396789de95ddf26292a909e5e35f4cbfff54cda2b\\securejarhandler-1.0.5.jar"));
 		for (Path gameJar : gameJars) {
 			if (logJars.contains(gameJar)) {
@@ -457,7 +459,8 @@ public class MinecraftGameProvider implements GameProvider {
 			ServiceLoader<FileSystemProvider> serviceLoader = ServiceLoader.load(FileSystemProvider.class, loader);
 			List<FileSystemProvider> existingProviders = FileSystemProvider.installedProviders();
 
-			serviceLoaderLoop: for (FileSystemProvider newProvider : serviceLoader) {
+			serviceLoaderLoop:
+			for (FileSystemProvider newProvider : serviceLoader) {
 				if (newProvider instanceof ForwardingFsProvider) continue;
 
 				String scheme = newProvider.getScheme();
@@ -472,9 +475,13 @@ public class MinecraftGameProvider implements GameProvider {
 				}
 
 				if (ForwardingFsProvider.allocate(newProvider) == null) {
-					throw new RuntimeException("can't allocate provider for "+newProvider);
+					throw new RuntimeException("can't allocate provider for " + newProvider);
 				}
 			}
+			arguments.addExtraArg("-fml.mcVersion=1.18.2");
+			arguments.addExtraArg("-fml.forgeVersion=40.1.2");
+			arguments.addExtraArg("-fml.mcpVersion=Fabric Intermediary");
+			arguments.addExtraArg("-launchTarget=forgeclientuserdev");
 			m.invoke(null, (Object) arguments.toArray());
 		} catch (InvocationTargetException e) {
 			throw new FormattedException("Minecraft has crashed!", e.getCause());
