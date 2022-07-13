@@ -1,5 +1,7 @@
 package net.fabricmc.minecraft.test.mixin.forge.modloading;
 
+import net.fabricmc.loader.api.FabricLoader;
+
 import net.minecraftforge.fml.loading.LogMarkers;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
 import net.minecraftforge.fml.loading.StringUtils;
@@ -28,26 +30,13 @@ public abstract class ModsFolderLocatorMixin extends AbstractJarFileLocator {
 
 	@Shadow
 	@Final
-	private Path modFolder;
-
-	@Shadow
-	@Final
 	private static String SUFFIX;
 
 	@Override
 	public Stream<Path> scanCandidates() {
-		LOGGER.debug(LogMarkers.SCAN, "Scanning mods dir {} for mods", this.modFolder);
+		LOGGER.info(LogMarkers.SCAN, "(FML) Scanning FabricLoader mods dir for mods");
 		var excluded = ModDirTransformerDiscoverer.allExcluded();
 
-		return uncheck(() -> Files.list(this.modFolder))
-				.filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
-				.filter(p -> {
-					try(JarFile jar = new JarFile(p.toFile())) {
-						return jar.stream().filter(jarEntry -> jarEntry.getName().equals("fabric.mod.json")).toList().size() == 0;
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
-				})
-				.sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())));
+		return FabricLoader.getInstance().getAllMods().stream().filter(modContainer -> modContainer.getMetadata().getType().equals("forge")).map(modContainer -> modContainer.getOrigin().getPaths().get(0));
 	}
 }

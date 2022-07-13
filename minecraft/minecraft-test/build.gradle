@@ -15,7 +15,7 @@ configurations.runtimeClasspath {
 dependencies {
 	minecraft "com.mojang:minecraft:1.18.2"
 	forge "net.minecraftforge:forge:1.18.2-40.1.2"
-	mappings "net.fabricmc:yarn:1.18.2+build.3:v2"
+	mappings loom.officialMojangMappings()
 
 	implementation project(":minecraft")
 

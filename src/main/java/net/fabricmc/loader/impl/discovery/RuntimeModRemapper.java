@@ -18,7 +18,6 @@ package net.fabricmc.loader.impl.discovery;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,134 +52,122 @@ import net.fabricmc.tinyremapper.TinyRemapper;
 
 public final class RuntimeModRemapper {
 	public static void remap(Collection<ModCandidate> modCandidates, Path tmpDir, Path outputDir) {
-		List<ModCandidate> modsToRemap = new ArrayList<>();
+		List<ModCandidate> fabricModsToRemap = new ArrayList<>();
+		List<ModCandidate> forgeModsToRemap = new ArrayList<>();
 
 		for (ModCandidate mod : modCandidates) {
 			if (mod.getRequiresRemap()) {
-				modsToRemap.add(mod);
+				if (mod.getMetadata().getType().equals("forge")) {
+					forgeModsToRemap.add(mod);
+				} else {
+					fabricModsToRemap.add(mod);
+				}
 			}
 		}
-
-		if (modsToRemap.isEmpty()) return;
 
 		FabricLauncher launcher = FabricLauncherBase.getLauncher();
 
-		TinyRemapper remapper = TinyRemapper.newRemapper()
-				.withMappings(TinyRemapperMappingsHelper.create(launcher.getMappingConfiguration().getMappings(), "intermediary", launcher.getTargetNamespace()))
-				.renameInvalidLocals(false)
-				.extension(new MixinExtensionReborn())
-				.build();
+		if (!forgeModsToRemap.isEmpty()) {
+			TinyRemapper remapper = TinyRemapper.newRemapper()
+					.withMappings(TinyRemapperMappingsHelper.create(launcher.getMappingConfiguration().getSrgMappings(), "srg", "intermediary"))
+					.renameInvalidLocals(false)
+					.ignoreConflicts(true) // FIXME: help_me
+					.build();
 
-		try {
-			remapper.readClassPathAsync(getRemapClasspath().toArray(new Path[0]));
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to populate remap classpath", e);
+			try {
+				// SRG -> Intermediary
+				List<Path> remapClasspath = new ArrayList<>(getRemapClasspath());
+				remapClasspath.add(Paths.get("C:\\Users\\hayde\\.gradle\\caches\\fabric-loom\\1.18.2\\forge-1.18.2-40.1.2-minecraft-merged-srg.jar"));
+				remapper.readClassPathAsync(remapClasspath.toArray(new Path[0]));
+				Path middleRemapStage = tmpDir.resolve("intermediary-forge-mods");
+				Files.createDirectories(middleRemapStage);
+				Map<ModCandidate, RemapInfo> infoMapPre = new HashMap<>(); // srg -> intermediary
+				Map<ModCandidate, RemapInfo> infoMapPost = new HashMap<>(); // intermediary -> current
+
+				for (ModCandidate mod : forgeModsToRemap) {
+					RemapInfo info = new RemapInfo();
+					RemapInfo postInfo = new RemapInfo();
+					infoMapPre.put(mod, info);
+					infoMapPost.put(mod, postInfo);
+
+					InputTag tag = remapper.createInputTag();
+					info.tag = tag;
+					postInfo.tag = tag;
+
+					if (mod.hasPath()) {
+						List<Path> paths = mod.getPaths();
+						if (paths.size() != 1) throw new UnsupportedOperationException("multiple path for " + mod);
+
+						info.inputPath = paths.get(0);
+					} else {
+						info.inputPath = mod.copyToDir(tmpDir, true);
+						info.inputIsTemp = true;
+					}
+
+					info.outputPath = middleRemapStage.resolve(mod.getDefaultFileName());
+					postInfo.inputPath = info.outputPath;
+					postInfo.outputPath = outputDir.resolve(mod.getDefaultFileName());
+					Files.deleteIfExists(info.outputPath);
+					Files.deleteIfExists(postInfo.outputPath);
+
+					remapper.readInputsAsync(tag, info.inputPath);
+				}
+
+				new ModRemapper(remapper).remap(forgeModsToRemap, infoMapPre);
+
+				// Intermediary -> Current (The original Fabric Loader method)
+				remapper = TinyRemapper.newRemapper()
+						.withMappings(TinyRemapperMappingsHelper.create(launcher.getMappingConfiguration().getMappings(), "intermediary", launcher.getTargetNamespace()))
+						.renameInvalidLocals(false)
+						.build();
+
+				remapper.readClassPathAsync(getRemapClasspath().toArray(new Path[0]));
+				for (RemapInfo info : infoMapPost.values()) {
+					remapper.readInputsAsync(info.tag, info.inputPath);
+				}
+
+				new ModRemapper(remapper).remap(forgeModsToRemap, infoMapPost);
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to populate remap classpath", e);
+			}
 		}
 
-		Map<ModCandidate, RemapInfo> infoMap = new HashMap<>();
+		if (!fabricModsToRemap.isEmpty()) {
+			TinyRemapper remapper = TinyRemapper.newRemapper()
+					.withMappings(TinyRemapperMappingsHelper.create(launcher.getMappingConfiguration().getMappings(), "intermediary", launcher.getTargetNamespace()))
+					.renameInvalidLocals(false)
+					.build();
 
-		try {
-			for (ModCandidate mod : modsToRemap) {
-				RemapInfo info = new RemapInfo();
-				infoMap.put(mod, info);
+			try {
+				remapper.readClassPathAsync(getRemapClasspath().toArray(new Path[0]));
+				Map<ModCandidate, RemapInfo> infoMap = new HashMap<>();
 
-				InputTag tag = remapper.createInputTag();
-				info.tag = tag;
+				for (ModCandidate mod : fabricModsToRemap) {
+					RemapInfo info = new RemapInfo();
+					infoMap.put(mod, info);
 
-				if (mod.hasPath()) {
-					List<Path> paths = mod.getPaths();
-					if (paths.size() != 1) throw new UnsupportedOperationException("multiple path for "+mod);
+					InputTag tag = remapper.createInputTag();
+					info.tag = tag;
 
-					info.inputPath = paths.get(0);
-				} else {
-					info.inputPath = mod.copyToDir(tmpDir, true);
-					info.inputIsTemp = true;
-				}
+					if (mod.hasPath()) {
+						List<Path> paths = mod.getPaths();
+						if (paths.size() != 1) throw new UnsupportedOperationException("multiple path for " + mod);
 
-				info.outputPath = outputDir.resolve(mod.getDefaultFileName());
-				Files.deleteIfExists(info.outputPath);
-
-				remapper.readInputsAsync(tag, info.inputPath);
-			}
-
-			//Done in a 2nd loop as we need to make sure all the inputs are present before remapping
-			for (ModCandidate mod : modsToRemap) {
-				RemapInfo info = infoMap.get(mod);
-				OutputConsumerPath outputConsumer = new OutputConsumerPath.Builder(info.outputPath).build();
-
-				FileSystemUtil.FileSystemDelegate delegate = FileSystemUtil.getJarFileSystem(info.inputPath, false);
-
-				if (delegate.get() == null) {
-					throw new RuntimeException("Could not open JAR file " + info.inputPath.getFileName() + " for NIO reading!");
-				}
-
-				Path inputJar = delegate.get().getRootDirectories().iterator().next();
-				outputConsumer.addNonClassFiles(inputJar, NonClassCopyMode.FIX_META_INF, remapper);
-
-				info.outputConsumerPath = outputConsumer;
-
-				remapper.apply(outputConsumer, info.tag);
-			}
-
-			//Done in a 3rd loop as this can happen when the remapper is doing its thing.
-			for (ModCandidate mod : modsToRemap) {
-				RemapInfo info = infoMap.get(mod);
-
-				String accessWidener = mod.getMetadata().getAccessWidener();
-
-				if (accessWidener != null) {
-					info.accessWidenerPath = accessWidener;
-
-					try (FileSystemUtil.FileSystemDelegate jarFs = FileSystemUtil.getJarFileSystem(info.inputPath, false)) {
-						FileSystem fs = jarFs.get();
-						info.accessWidener = remapAccessWidener(Files.readAllBytes(fs.getPath(accessWidener)), remapper.getRemapper());
-					} catch (Throwable t) {
-						throw new RuntimeException("Error remapping access widener for mod '"+mod.getId()+"'!", t);
+						info.inputPath = paths.get(0);
+					} else {
+						info.inputPath = mod.copyToDir(tmpDir, true);
+						info.inputIsTemp = true;
 					}
-				}
-			}
 
-			remapper.finish();
-
-			for (ModCandidate mod : modsToRemap) {
-				RemapInfo info = infoMap.get(mod);
-
-				info.outputConsumerPath.close();
-
-				if (info.accessWidenerPath != null) {
-					try (FileSystemUtil.FileSystemDelegate jarFs = FileSystemUtil.getJarFileSystem(info.outputPath, false)) {
-						FileSystem fs = jarFs.get();
-
-						Files.delete(fs.getPath(info.accessWidenerPath));
-						Files.write(fs.getPath(info.accessWidenerPath), info.accessWidener);
-					}
-				}
-
-				mod.setPaths(Collections.singletonList(info.outputPath));
-			}
-		} catch (Throwable t) {
-			remapper.finish();
-
-			for (RemapInfo info : infoMap.values()) {
-				if (info.outputPath == null) {
-					continue;
-				}
-
-				try {
+					info.outputPath = outputDir.resolve(mod.getDefaultFileName());
 					Files.deleteIfExists(info.outputPath);
-				} catch (IOException e) {
-					Log.warn(LogCategory.MOD_REMAP, "Error deleting failed output jar %s", info.outputPath, e);
-				}
-			}
 
-			throw new FormattedException("Failed to remap mods!", t);
-		} finally {
-			for (RemapInfo info : infoMap.values()) {
-				try {
-					if (info.inputIsTemp) Files.deleteIfExists(info.inputPath);
-				} catch (IOException e) {
-					Log.warn(LogCategory.MOD_REMAP, "Error deleting temporary input jar %s", info.inputIsTemp, e);
+					remapper.readInputsAsync(tag, info.inputPath);
 				}
+
+				new ModRemapper(remapper).remap(fabricModsToRemap, infoMap);
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to populate remap classpath", e);
 			}
 		}
 	}
@@ -200,11 +187,98 @@ public final class RuntimeModRemapper {
 			throw new RuntimeException("No remapClasspathFile provided");
 		}
 
-		String content = new String(Files.readAllBytes(Paths.get(remapClasspathFile)), StandardCharsets.UTF_8);
+		String content = Files.readString(Paths.get(remapClasspathFile));
 
 		return Arrays.stream(content.split(File.pathSeparator))
 				.map(Paths::get)
 				.collect(Collectors.toList());
+	}
+
+	private record ModRemapper(TinyRemapper remapper) {
+
+		public void remap(List<ModCandidate> modsToRemap, Map<ModCandidate, RemapInfo> infoMap) {
+			try {
+				//Done in a 2nd loop as we need to make sure all the inputs are present before remapping
+				for (ModCandidate mod : modsToRemap) {
+					RemapInfo info = infoMap.get(mod);
+					OutputConsumerPath outputConsumer = new OutputConsumerPath.Builder(info.outputPath).build();
+
+					FileSystemUtil.FileSystemDelegate delegate = FileSystemUtil.getJarFileSystem(info.inputPath, false);
+
+					if (delegate.get() == null) {
+						throw new RuntimeException("Could not open JAR file " + info.inputPath.getFileName() + " for NIO reading!");
+					}
+
+					Path inputJar = delegate.get().getRootDirectories().iterator().next();
+					outputConsumer.addNonClassFiles(inputJar, NonClassCopyMode.FIX_META_INF, remapper);
+
+					info.outputConsumerPath = outputConsumer;
+
+					remapper.apply(outputConsumer, info.tag);
+				}
+
+				//Done in a 3rd loop as this can happen when the remapper is doing its thing.
+				for (ModCandidate mod : modsToRemap) {
+					RemapInfo info = infoMap.get(mod);
+
+					String accessWidener = mod.getMetadata().getAccessWidener();
+
+					if (accessWidener != null) {
+						info.accessWidenerPath = accessWidener;
+
+						try (FileSystemUtil.FileSystemDelegate jarFs = FileSystemUtil.getJarFileSystem(info.inputPath, false)) {
+							FileSystem fs = jarFs.get();
+							info.accessWidener = remapAccessWidener(Files.readAllBytes(fs.getPath(accessWidener)), remapper.getRemapper());
+						} catch (Throwable t) {
+							throw new RuntimeException("Error remapping access widener for mod '" + mod.getId() + "'!", t);
+						}
+					}
+				}
+
+				remapper.finish();
+
+				for (ModCandidate mod : modsToRemap) {
+					RemapInfo info = infoMap.get(mod);
+
+					info.outputConsumerPath.close();
+
+					if (info.accessWidenerPath != null) {
+						try (FileSystemUtil.FileSystemDelegate jarFs = FileSystemUtil.getJarFileSystem(info.outputPath, false)) {
+							FileSystem fs = jarFs.get();
+
+							Files.delete(fs.getPath(info.accessWidenerPath));
+							Files.write(fs.getPath(info.accessWidenerPath), info.accessWidener);
+						}
+					}
+
+					mod.setPaths(Collections.singletonList(info.outputPath));
+				}
+			} catch (Throwable t) {
+				remapper.finish();
+
+				for (RemapInfo info : infoMap.values()) {
+					if (info.outputPath == null) {
+						continue;
+					}
+
+					try {
+						Files.deleteIfExists(info.outputPath);
+					} catch (IOException e) {
+						Log.warn(LogCategory.MOD_REMAP, "Error deleting failed output jar %s", info.outputPath, e);
+					}
+				}
+
+				throw new FormattedException("Failed to remap mods!", t);
+			} finally {
+				for (RemapInfo info : infoMap.values()) {
+					try {
+						if (info.inputIsTemp) Files.deleteIfExists(info.inputPath);
+					} catch (IOException e) {
+						Log.warn(LogCategory.MOD_REMAP, "Error deleting temporary input jar %s", info.inputIsTemp, e);
+					}
+				}
+			}
+		}
 	}
 
 	private static class RemapInfo {

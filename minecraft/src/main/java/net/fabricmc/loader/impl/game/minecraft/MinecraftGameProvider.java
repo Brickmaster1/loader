@@ -428,8 +428,7 @@ public class MinecraftGameProvider implements GameProvider {
 
 	@Override
 	public void unlockClassPath(FabricLauncher launcher) {
-		launcher.addToClassPath(Paths.get("E:\\Projects\\MaldLoader\\loader\\minecraft\\minecraft-test\\run\\mods\\Mekanism-1.18.2-yarn.jar"));
-		launcher.addToClassPath(Paths.get("C:\\Users\\hayde\\.gradle\\caches\\transforms-3\\7c6ead78cba9eb551d073ae2faf4f2cb\\transformed\\alfd-transformed-5d678704bafd65a97192564396789de95ddf26292a909e5e35f4cbfff54cda2b\\securejarhandler-1.0.5.jar"));
+		launcher.addToClassPath(Paths.get("C:\\Users\\hayde\\.gradle\\caches\\transforms-3\\b30e95fca5703ffdf4ed8cc804947bfd\\transformed\\alfd-transformed-5d678704bafd65a97192564396789de95ddf26292a909e5e35f4cbfff54cda2b\\securejarhandler-1.0.5.jar"));
 		for (Path gameJar : gameJars) {
 			if (logJars.contains(gameJar)) {
 				launcher.setAllowedPrefixes(gameJar);

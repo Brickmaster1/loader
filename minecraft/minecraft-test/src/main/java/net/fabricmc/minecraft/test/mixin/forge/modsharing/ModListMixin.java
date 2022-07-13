@@ -67,9 +67,9 @@ public abstract class ModListMixin {
 	 */
 	@Overwrite
 	void setLoadedMods(final List<ModContainer> modContainers) {
-		List<WrappedFgModContainer> fabricModContainers = FabricLoader.getInstance().getAllMods().stream().map(WrappedFgModContainer::new).filter(
-				mod -> !mod.getModId().equals("minecraft")
-		).toList();
+		List<WrappedFgModContainer> fabricModContainers = FabricLoader.getInstance().getAllMods().stream().map(WrappedFgModContainer::new)
+				.filter(mod -> modContainers.stream().map(ModContainer::getModId).noneMatch(s -> s.equals(mod.getModId())))
+				.toList();
 		List<ModContainer> mutableMods = new ArrayList<>(modContainers);
 		mutableMods.addAll(fabricModContainers);
 

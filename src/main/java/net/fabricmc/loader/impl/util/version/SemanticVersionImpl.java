@@ -104,7 +104,11 @@ public class SemanticVersionImpl extends net.fabricmc.loader.util.version.Semant
 			}
 
 			try {
-				components[i] = Integer.parseInt(compStr);
+				if (compStr.equals("forge")) {
+					components[i] = 1;
+				} else {
+					components[i] = Integer.parseInt(compStr);
+				}
 
 				if (components[i] < 0) {
 					throw new VersionParsingException("Negative version number component '" + compStr + "'!");

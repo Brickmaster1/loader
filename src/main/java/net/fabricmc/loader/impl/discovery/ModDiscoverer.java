@@ -223,7 +223,7 @@ public final class ModDiscoverer {
 		}
 
 		private ModScanTask(List<Path> paths, String localPath, RewindableInputStream is, long hash,
-				boolean requiresRemap, List<String> parentPaths) {
+							boolean requiresRemap, List<String> parentPaths) {
 			this.paths = paths;
 			this.localPath = localPath != null ? localPath : paths.get(0).toString();
 			this.is = is;
@@ -260,12 +260,15 @@ public final class ModDiscoverer {
 		private ModCandidate computeDir() throws IOException, ParseMetadataException {
 			for (Path path : paths) {
 				Path modJson = path.resolve("fabric.mod.json");
-				if (!Files.exists(modJson)) continue;
-
+				Path forgeModToml = path.resolve("META-INF/mods.toml");
 				LoaderModMetadata metadata;
 
 				try (InputStream is = Files.newInputStream(modJson)) {
-					metadata = parseMetadata(is, path.toString());
+					if (Files.exists(modJson)) {
+						metadata = parseMetadata(is, path.toString());
+					} else if (Files.exists(forgeModToml)) {
+						metadata = parseForgeMetadata(is, path.toString());
+					} else continue;
 				}
 
 				return ModCandidate.createPlain(paths, metadata, requiresRemap, Collections.emptyList());
@@ -278,14 +281,20 @@ public final class ModDiscoverer {
 			assert paths.size() == 1;
 
 			try (ZipFile zf = new ZipFile(paths.get(0).toFile())) {
-				ZipEntry entry = zf.getEntry("fabric.mod.json");
-				if (entry == null) return null;
+				ZipEntry fabricModJson = zf.getEntry("fabric.mod.json");
+				ZipEntry forgeModToml = zf.getEntry("META-INF/mods.toml");
 
 				LoaderModMetadata metadata;
 
-				try (InputStream is = zf.getInputStream(entry)) {
-					metadata = parseMetadata(is, localPath);
-				}
+				if (fabricModJson != null) {
+					try (InputStream is = zf.getInputStream(fabricModJson)) {
+						metadata = parseMetadata(is, localPath);
+					}
+				} else if(forgeModToml != null) {
+					try (InputStream is = zf.getInputStream(forgeModToml)) {
+						metadata = parseForgeMetadata(is, localPath);
+					}
+				} else return null;
 
 				if (!metadata.loadsInEnvironment(envType)) {
 					return ModCandidate.createPlain(paths, metadata, requiresRemap, Collections.emptyList());
@@ -464,6 +473,10 @@ public final class ModDiscoverer {
 		private LoaderModMetadata parseMetadata(InputStream is, String localPath) throws ParseMetadataException {
 			return ModMetadataParser.parseMetadata(is, localPath, parentPaths, versionOverrides, depOverrides);
 		}
+
+		private LoaderModMetadata parseForgeMetadata(InputStream is, String localPath) throws ParseMetadataException {
+			return ModMetadataParser.parseForgeMetadata(is, localPath, parentPaths, versionOverrides, depOverrides);
+		}
 	}
 
 	private static boolean isValidNestedJarEntry(ZipEntry entry) {
@@ -472,6 +485,7 @@ public final class ModDiscoverer {
 
 	private interface ZipEntrySource {
 		ZipEntry getNextEntry() throws IOException;
+
 		RewindableInputStream getInputStream() throws IOException;
 	}
 

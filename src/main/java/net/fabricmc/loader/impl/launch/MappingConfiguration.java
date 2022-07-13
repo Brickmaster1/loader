@@ -22,6 +22,9 @@ import java.io.InputStreamReader;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.jar.Attributes.Name;
 import java.util.jar.Manifest;
 import java.util.zip.ZipError;
@@ -38,6 +41,7 @@ public final class MappingConfiguration {
 	private String gameId;
 	private String gameVersion;
 	private TinyTree mappings;
+	private TinyTree forgeMappings;
 
 	public String getGameId() {
 		initialize();
@@ -64,6 +68,12 @@ public final class MappingConfiguration {
 		return mappings;
 	}
 
+	public TinyTree getSrgMappings() {
+		initialize();
+
+		return forgeMappings;
+	}
+
 	public String getTargetNamespace() {
 		return FabricLauncherBase.getLauncher().isDevelopment() ? "named" : "intermediary";
 	}
@@ -77,6 +87,15 @@ public final class MappingConfiguration {
 		if (initialized) return;
 
 		URL url = MappingConfiguration.class.getClassLoader().getResource("mappings/mappings.tiny");
+		Path forgeMappings = Paths.get(System.getProperty("fabric.yarnWithSrg.path"));
+
+		try (BufferedReader reader = Files.newBufferedReader(forgeMappings)) {
+			long time = System.currentTimeMillis();
+			this.forgeMappings = TinyMappingFactory.loadWithDetection(reader);
+			Log.debug(LogCategory.MAPPINGS, "Loading Forge mappings took %d ms", System.currentTimeMillis() - time);
+		} catch (IOException e) {
+			throw new RuntimeException("Error reading Forge mappings", e);
+		}
 
 		if (url != null) {
 			try {
@@ -104,6 +123,11 @@ public final class MappingConfiguration {
 		if (mappings == null) {
 			Log.info(LogCategory.MAPPINGS, "Mappings not present!");
 			mappings = TinyMappingFactory.EMPTY_TREE;
+		}
+
+		if (this.forgeMappings == null) {
+			Log.info(LogCategory.MAPPINGS, "Forge Mappings not present!");
+			this.forgeMappings = TinyMappingFactory.EMPTY_TREE;
 		}
 
 		initialized = true;
