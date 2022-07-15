@@ -4,7 +4,9 @@
   "name": "Minecraft Test Mod",
   "version": "1.0.0",
   "entrypoints": {
-    "preLaunch": ["me.hydos.mald.wrapper.MaldPreLaunch"]
+    "preLaunch": [
+      "com.basedloader.MaldPreLaunch"
+    ]
   },
   "mixins": ["fabricmc.test.mixins.client.json"]
 }

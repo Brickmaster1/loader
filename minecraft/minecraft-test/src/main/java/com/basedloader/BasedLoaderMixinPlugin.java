@@ -18,7 +18,6 @@ public class BasedLoaderMixinPlugin implements IMixinConfigPlugin {
 
 	@Override
 	public void onLoad(String s) {
-
 	}
 
 	@Override
@@ -33,7 +32,6 @@ public class BasedLoaderMixinPlugin implements IMixinConfigPlugin {
 
 	@Override
 	public void acceptTargets(Set<String> set, Set<String> set1) {
-
 	}
 
 	@Override
@@ -51,7 +49,7 @@ public class BasedLoaderMixinPlugin implements IMixinConfigPlugin {
 			Optional<Path> path = forgeMod.findPath("META-INF/accesstransformer.cfg");
 
 			if (path.isPresent() && Files.exists(path.get())) {
-
+				// TODO: apply accessTransformer
 			}
 		}
 	}

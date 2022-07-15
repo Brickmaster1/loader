@@ -36,6 +36,8 @@ import java.util.ServiceLoader;
 import java.util.Set;
 
 import net.fabricmc.api.EnvType;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.ObjectShare;
 import net.fabricmc.loader.api.VersionParsingException;
 import net.fabricmc.loader.api.metadata.ModDependency;
@@ -477,10 +479,12 @@ public class MinecraftGameProvider implements GameProvider {
 					throw new RuntimeException("can't allocate provider for " + newProvider);
 				}
 			}
-			arguments.addExtraArg("-fml.mcVersion=1.18.2");
-			arguments.addExtraArg("-fml.forgeVersion=40.1.2");
-			arguments.addExtraArg("-fml.mcpVersion=Fabric Intermediary");
-			arguments.addExtraArg("-launchTarget=forgeclientuserdev");
+
+			ModContainer minecraft = FabricLoader.getInstance().getModContainer("minecraft").get();
+			arguments.getOrDefault("fml.mcVersion", minecraft.getMetadata().getVersion().getFriendlyString());
+			arguments.getOrDefault("fml.forgeVersion", "unknown");
+			arguments.put("fml.mcpVersion", "Fabric Intermediary");
+			arguments.put("launchTarget", "forgeclientuserdev");
 			m.invoke(null, (Object) arguments.toArray());
 		} catch (InvocationTargetException e) {
 			throw new FormattedException("Minecraft has crashed!", e.getCause());

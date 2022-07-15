@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "net.fabricmc.minecraft.test.mixin",
+  "package": "com.basedloader.mixin",
   "compatibilityLevel": "JAVA_8",
   "plugin": "com.basedloader.BasedLoaderMixinPlugin",
   "mixins": [
@@ -16,28 +16,28 @@
     "forge.modloading.ModsFolderLocatorMixin",
     "forge.modsharing.BrandingControlMixin",
     "forge.modsharing.ModListMixin",
-    "minecraft.crash.WinNativeModuleUtilMixin",
-    "modlauncher.launch.CommonDevLaunchHandlerMixin",
-    "modlauncher.launch.CommonUserdevLaunchHandlerMixin",
-    "modlauncher.launch.EnvironmentMixin",
-    "modlauncher.launch.FMLLoaderMixin",
-    "modlauncher.launch.ForgeClientUserdevLaunchHandlerMixin",
-    "modlauncher.launch.JarMixin",
-    "modlauncher.launch.LanguageLoadingProviderMixin",
-    "modlauncher.launch.LauncherMixin",
-    "modlauncher.launch.LaunchPluginHandlerMixin",
-    "modlauncher.launch.LaunchServiceHandlerMixin",
-    "modlauncher.launch.ModDiscovererMixin",
-    "modlauncher.launch.ModularURLHandlerMixin",
-    "modlauncher.launch.ModuleLayerHandlerMixin",
-    "modlauncher.launch.ServiceLoaderUtilsMixin",
-    "modlauncher.launch.TransformationServiceDecoratorMixin",
-    "modlauncher.launch.TransformationServicesHandlerMixin"
+    "crash.WinNativeModuleUtilMixin",
+    "launch.CommonDevLaunchHandlerMixin",
+    "launch.CommonUserdevLaunchHandlerMixin",
+    "launch.EnvironmentMixin",
+    "launch.FMLLoaderMixin",
+    "launch.ForgeClientUserdevLaunchHandlerMixin",
+    "launch.JarMixin",
+    "launch.LanguageLoadingProviderMixin",
+    "launch.LauncherMixin",
+    "launch.LaunchPluginHandlerMixin",
+    "launch.LaunchServiceHandlerMixin",
+    "launch.ModDiscovererMixin",
+    "launch.ModularURLHandlerMixin",
+    "launch.ModuleLayerHandlerMixin",
+    "launch.ServiceLoaderUtilsMixin",
+    "launch.TransformationServiceDecoratorMixin",
+    "launch.TransformationServicesHandlerMixin"
+  ],
+  "client": [
+    "client.forge.interop.ModListScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "client": [
-    "forge.modsharing.ModListScreenMixin"
-  ]
+  }
 }

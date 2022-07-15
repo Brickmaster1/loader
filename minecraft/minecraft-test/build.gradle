@@ -19,9 +19,6 @@ dependencies {
 
 	implementation project(":minecraft")
 
-	// Overwrite what Arch Loom is providing for SecureJarHandler
-	// compileOnly("cpw.mods:securejarhandler:0.9.61")
-
 	// Required for mixin annotation processor
 	annotationProcessor "org.ow2.asm:asm:${project.asm_version}"
 	annotationProcessor "org.ow2.asm:asm-analysis:${project.asm_version}"
