@@ -1,4 +1,4 @@
-package com.basedloader;
+package com.basedloader.util;
 
 import net.fabricmc.loader.impl.launch.knot.KnotClassLoader;
 

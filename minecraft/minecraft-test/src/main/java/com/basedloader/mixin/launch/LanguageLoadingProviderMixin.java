@@ -3,7 +3,7 @@ package com.basedloader.mixin.launch;
 import java.util.Optional;
 import java.util.ServiceLoader;
 
-import com.basedloader.AdvanceLoader;
+import com.basedloader.util.AdvanceLoader;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.LanguageLoadingProvider;
 import org.spongepowered.asm.mixin.Mixin;

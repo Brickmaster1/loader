@@ -2,7 +2,7 @@ package com.basedloader.mixin.launch;
 
 import cpw.mods.modlauncher.Environment;
 import cpw.mods.modlauncher.api.IModuleLayerManager;
-import com.basedloader.DummyModuleLayerManager;
+import com.basedloader.util.DummyModuleLayerManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 

@@ -1,6 +1,6 @@
 package com.basedloader;
 
-import com.basedloader.AdvanceLoader;
+import com.basedloader.util.AdvanceLoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
 
 public class MaldPreLaunch implements PreLaunchEntrypoint {

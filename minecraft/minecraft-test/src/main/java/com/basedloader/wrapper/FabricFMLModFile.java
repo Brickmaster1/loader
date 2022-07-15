@@ -1,4 +1,4 @@
-package com.basedloader;
+package com.basedloader.wrapper;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -16,8 +16,8 @@ import net.minecraftforge.forgespi.locating.IModLocator;
 
 import net.fabricmc.loader.api.ModContainer;
 
-public record WrappedFabricModFile(ModContainer fabricMod,
-								   WrappedFgModContainer.IModInfoWrapper wrapper) implements IModFile {
+public record FabricFMLModFile(ModContainer fabricMod,
+							   FabricFMLModContainer.IModInfoWrapper wrapper) implements IModFile {
 
 	@Override
 	public List<IModLanguageProvider> getLoaders() {

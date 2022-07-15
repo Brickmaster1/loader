@@ -16,7 +16,7 @@ import cpw.mods.modlauncher.TransformStore;
 import cpw.mods.modlauncher.TransformationServiceDecorator;
 import cpw.mods.modlauncher.TransformerAuditTrail;
 import cpw.mods.modlauncher.api.ITransformationService;
-import com.basedloader.AdvanceLoader;
+import com.basedloader.util.AdvanceLoader;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;

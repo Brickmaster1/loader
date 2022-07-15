@@ -1,4 +1,4 @@
-package com.basedloader;
+package com.basedloader.util;
 
 import cpw.mods.modlauncher.api.IModuleLayerManager;
 

@@ -1,4 +1,4 @@
-package com.basedloader;
+package com.basedloader.wrapper;
 
 import java.net.URL;
 import java.util.HashMap;
@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.basedloader.WrappedFabricModFile;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.forgespi.language.IConfigurable;
 import net.minecraftforge.forgespi.language.IModFileInfo;
@@ -19,9 +18,9 @@ import net.fabricmc.loader.api.Version;
 
 import org.apache.maven.artifact.versioning.VersionRange;
 
-public class WrappedFgModContainer extends ModContainer {
+public class FabricFMLModContainer extends ModContainer {
 
-	public WrappedFgModContainer(net.fabricmc.loader.api.ModContainer fabricMod) {
+	public FabricFMLModContainer(net.fabricmc.loader.api.ModContainer fabricMod) {
 		super(new IModInfoWrapper(fabricMod));
 		contextExtension = () -> null;
 	}
@@ -146,7 +145,7 @@ public class WrappedFgModContainer extends ModContainer {
 
 		@Override
 		public IModFile getFile() {
-			return new WrappedFabricModFile(this.fabricMod, this);
+			return new FabricFMLModFile(this.fabricMod, this);
 		}
 
 		@Override

@@ -2,7 +2,7 @@ package com.basedloader.mixin.launch;
 
 import java.util.ServiceLoader;
 
-import com.basedloader.AdvanceLoader;
+import com.basedloader.util.AdvanceLoader;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;

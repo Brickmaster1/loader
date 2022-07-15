@@ -8,7 +8,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.basedloader.WrappedFgModContainer;
+import com.basedloader.wrapper.FabricFMLModContainer;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModFile;
@@ -67,7 +67,7 @@ public abstract class ModListMixin {
 	 */
 	@Overwrite
 	void setLoadedMods(final List<ModContainer> modContainers) {
-		List<WrappedFgModContainer> fabricModContainers = FabricLoader.getInstance().getAllMods().stream().map(WrappedFgModContainer::new)
+		List<FabricFMLModContainer> fabricModContainers = FabricLoader.getInstance().getAllMods().stream().map(FabricFMLModContainer::new)
 				.filter(mod -> modContainers.stream().map(ModContainer::getModId).noneMatch(s -> s.equals(mod.getModId())))
 				.toList();
 		List<ModContainer> mutableMods = new ArrayList<>(modContainers);
@@ -90,7 +90,7 @@ public abstract class ModListMixin {
 			modFileScanData = this.sortedList.stream()
 					.map(IModInfo::getOwningFile)
 					.filter(Objects::nonNull)
-					.filter(iModFileInfo -> !(iModFileInfo instanceof WrappedFgModContainer.IModInfoWrapper))
+					.filter(iModFileInfo -> !(iModFileInfo instanceof FabricFMLModContainer.IModInfoWrapper))
 					.map(IModFileInfo::getFile)
 					.distinct()
 					.map(IModFile::getScanResult)

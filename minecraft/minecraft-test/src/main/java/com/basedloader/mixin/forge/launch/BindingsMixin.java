@@ -1,6 +1,6 @@
 package com.basedloader.mixin.forge.launch;
 
-import com.basedloader.AdvanceLoader;
+import com.basedloader.util.AdvanceLoader;
 import net.minecraftforge.fml.Bindings;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
