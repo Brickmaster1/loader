@@ -22,6 +22,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -31,7 +32,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.basedloader.remap.ForgeModClassRemapper;
+import com.basedloader.util.BasedConstants;
 import io.github.astrarre.amalg.mixin.MixinExtensionReborn;
+
+import net.fabricmc.loader.impl.metadata.AbstractModMetadata;
+
+import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.commons.Remapper;
 
 import net.fabricmc.accesswidener.AccessWidenerReader;
@@ -50,6 +57,8 @@ import net.fabricmc.tinyremapper.NonClassCopyMode;
 import net.fabricmc.tinyremapper.OutputConsumerPath;
 import net.fabricmc.tinyremapper.TinyRemapper;
 
+import org.objectweb.asm.tree.ClassNode;
+
 public final class RuntimeModRemapper {
 	public static void remap(Collection<ModCandidate> modCandidates, Path tmpDir, Path outputDir) {
 		List<ModCandidate> fabricModsToRemap = new ArrayList<>();
@@ -57,7 +66,12 @@ public final class RuntimeModRemapper {
 
 		for (ModCandidate mod : modCandidates) {
 			if (mod.getRequiresRemap()) {
-				if (mod.getMetadata().getType().equals("forge")) {
+				if (mod.getMetadata().getType().equals(BasedConstants.FORGE_MOD_TYPE)) {
+					try {
+						remapForgeMod(mod, tmpDir, outputDir);
+					} catch (IOException e) {
+						throw new RuntimeException("Failed to remap Forge mod", e);
+					}
 					forgeModsToRemap.add(mod);
 				} else {
 					fabricModsToRemap.add(mod);
@@ -149,9 +163,9 @@ public final class RuntimeModRemapper {
 					InputTag tag = remapper.createInputTag();
 					info.tag = tag;
 
-					if (mod.hasPath()) {
-						List<Path> paths = mod.getPaths();
-						if (paths.size() != 1) throw new UnsupportedOperationException("multiple path for " + mod);
+				if (mod.hasPath()) {
+					List<Path> paths = mod.getPaths();
+					if (paths.size() != 1) throw new UnsupportedOperationException("multiple path for " + mod);
 
 						info.inputPath = paths.get(0);
 					} else {
@@ -280,6 +294,81 @@ public final class RuntimeModRemapper {
 			}
 		}
 	}
+
+	private static void remapForgeMod(ModCandidate mod, Path tmpDir, Path outputDir) throws IOException {
+		Path inputPath;
+		if (mod.hasPath()) {
+			List<Path> paths = mod.getPaths();
+			if (paths.size() != 1) throw new UnsupportedOperationException("multiple path for " + mod);
+
+			inputPath = paths.get(0);
+		} else {
+			inputPath = mod.copyToDir(tmpDir, true);
+		}
+
+		Path minecraftJar = getRemapClasspath().stream().filter(path -> path.toString().contains("minecraft")).toList().get(0);
+		ForgeModClassRemapper remapper = new ForgeModClassRemapper(minecraftJar, FabricLauncherBase.getLauncher().getMappingConfiguration().getSrgMappings(), "srg", "intermediary");
+		Path outModPath = outputDir.resolve(mod.getId() + "-intermediary.jar");
+		Files.deleteIfExists(outModPath);
+
+		// Step 1: Cache nodes for method hierarchy fixes
+		try (FileSystemUtil.FileSystemDelegate jarFs = FileSystemUtil.getJarFileSystem(minecraftJar, false)) {
+			Files.walk(jarFs.get().getPath("/")).forEach(path -> {
+				if (!Files.isDirectory(path)) {
+					if (path.toString().endsWith(".class")) {
+						try {
+							ClassNode node = new ClassNode();
+							new ClassReader(Files.readAllBytes(path)).accept(node, 0);
+							remapper.cache(node.name, node);
+						} catch (IOException e) {
+							throw new RuntimeException(e);
+						}
+					}
+				}
+			});
+		}
+
+		try (FileSystemUtil.FileSystemDelegate outputFs = FileSystemUtil.getJarFileSystem(outModPath, true)) {
+			try (FileSystemUtil.FileSystemDelegate jarFs = FileSystemUtil.getJarFileSystem(inputPath, false)) {
+				// Step 1 part 2: Include mod files
+				Files.walk(jarFs.get().getPath("/")).forEach(path -> {
+					if (!Files.isDirectory(path)) {
+						if (path.toString().endsWith(".class")) {
+							try {
+								ClassNode node = new ClassNode();
+								new ClassReader(Files.readAllBytes(path)).accept(node, 0);
+								remapper.cache(node.name, node);
+							} catch (IOException e) {
+								throw new RuntimeException(e);
+							}
+						}
+					}
+				});
+
+				// Step 2: Remap
+				Files.walk(jarFs.get().getPath("/")).forEach(path -> {
+					try {
+						if (!Files.isDirectory(path)) {
+							Path outPath = outputFs.get().getPath(path.toString());
+							Files.createDirectories(outPath.getParent());
+
+							if (path.toString().endsWith(".class")) {
+								byte[] classBytes = Files.readAllBytes(path);
+								Files.write(outPath, remapper.remap(classBytes));
+							} else {
+								Files.copy(path, outPath, StandardCopyOption.COPY_ATTRIBUTES);
+							}
+						}
+					} catch (IOException e) {
+						throw new RuntimeException("Failed copying resources during Forge remapping", e);
+					}
+				});
+			} catch (Throwable t) {
+				throw new RuntimeException("Error remapping access widener for mod '" + mod.getId() + "'!", t);
+			}
+		}
+	}
+
 
 	private static class RemapInfo {
 		InputTag tag;
