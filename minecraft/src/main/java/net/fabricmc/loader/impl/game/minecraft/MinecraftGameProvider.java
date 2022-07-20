@@ -20,6 +20,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.spi.FileSystemProvider;
@@ -125,7 +128,7 @@ public class MinecraftGameProvider implements GameProvider {
 			int version = versionData.getClassVersion().getAsInt() - 44;
 
 			try {
-				metadata.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "java", Collections.singletonList(String.format(">=%d", version))));
+				metadata.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "java", Collections.singletonList(String.format(Locale.ENGLISH, ">=%d", version))));
 			} catch (VersionParsingException e) {
 				throw new RuntimeException(e);
 			}
@@ -199,8 +202,6 @@ public class MinecraftGameProvider implements GameProvider {
 			envGameJar = classifier.getOrigin(envGameLib);
 			if (envGameJar == null) return false;
 
-			Log.configureBuiltin(true, false);
-
 			commonGameJar = classifier.getOrigin(McLibrary.MC_COMMON);
 
 			if (commonGameJarDeclared && commonGameJar == null) {
@@ -218,12 +219,15 @@ public class MinecraftGameProvider implements GameProvider {
 			hasModLoader = classifier.has(McLibrary.MODLOADER);
 			log4jAvailable = classifier.has(McLibrary.LOG4J_API) && classifier.has(McLibrary.LOG4J_CORE);
 			slf4jAvailable = classifier.has(McLibrary.SLF4J_API) && classifier.has(McLibrary.SLF4J_CORE);
+			boolean hasLogLib = log4jAvailable || slf4jAvailable;
+
+			Log.configureBuiltin(hasLogLib, !hasLogLib);
 
 			for (McLibrary lib : McLibrary.LOGGING) {
 				Path path = classifier.getOrigin(lib);
 
 				if (path != null) {
-					if (log4jAvailable || slf4jAvailable) {
+					if (hasLogLib) {
 						logJars.add(path);
 					} else if (!gameJars.contains(path)) {
 						miscGameLibraries.add(path);
@@ -232,7 +236,7 @@ public class MinecraftGameProvider implements GameProvider {
 			}
 
 			miscGameLibraries.addAll(classifier.getUnmatchedOrigins());
-			validParentClassPath = classifier.getLoaderOrigins();
+			validParentClassPath = classifier.getSystemLibraries();
 		} catch (IOException e) {
 			throw ExceptionUtil.wrap(e);
 		}
@@ -304,7 +308,7 @@ public class MinecraftGameProvider implements GameProvider {
 				} else if (i == 1) {
 					name = "common";
 				} else {
-					name = String.format("extra-%d", i - 2);
+					name = String.format(Locale.ENGLISH, "extra-%d", i - 2);
 				}
 
 				obfJars.put(name, gameJars.get(i));
@@ -454,9 +458,10 @@ public class MinecraftGameProvider implements GameProvider {
 			targetClass = "net.fabricmc.loader.impl.game.minecraft.applet.AppletMain";
 		}
 
+		MethodHandle invoker;
+
 		try {
 			Class<?> c = loader.loadClass(targetClass);
-			Method m = c.getMethod("main", String[].class);
 			ServiceLoader<FileSystemProvider> serviceLoader = ServiceLoader.load(FileSystemProvider.class, loader);
 			List<FileSystemProvider> existingProviders = FileSystemProvider.installedProviders();
 
@@ -485,11 +490,15 @@ public class MinecraftGameProvider implements GameProvider {
 			arguments.getOrDefault("fml.forgeVersion", "unknown");
 			arguments.put("fml.mcpVersion", "Fabric Intermediary");
 			arguments.put("launchTarget", "forgeclientuserdev");
-			m.invoke(null, (Object) arguments.toArray());
-		} catch (InvocationTargetException e) {
-			throw new FormattedException("Minecraft has crashed!", e.getCause());
-		} catch (ReflectiveOperationException e) {
+			invoker = MethodHandles.lookup().findStatic(c, "main", MethodType.methodType(void.class, String[].class));
+		} catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException e) {
 			throw new FormattedException("Failed to start Minecraft", e);
+		}
+
+		try {
+			invoker.invokeExact(arguments.toArray());
+		} catch (Throwable t) {
+			throw new FormattedException("Minecraft has crashed!", t);
 		}
 	}
 }
