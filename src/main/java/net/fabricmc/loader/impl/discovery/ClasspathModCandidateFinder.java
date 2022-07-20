@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +87,7 @@ public class ClasspathModCandidateFinder implements ModCandidateFinder {
 		String prop = System.getProperty(SystemProperties.PATH_GROUPS);
 		if (prop == null) return Collections.emptyMap();
 
+		Set<Path> cp = new HashSet<>(FabricLauncherBase.getLauncher().getClassPath());
 		Map<Path, List<Path>> ret = new HashMap<>();
 
 		for (String group : prop.split(File.pathSeparator+File.pathSeparator)) {
@@ -97,15 +99,19 @@ public class ClasspathModCandidateFinder implements ModCandidateFinder {
 				Path resolvedPath = Paths.get(path);
 
 				if (!Files.exists(resolvedPath)) {
-					Log.warn(LogCategory.DISCOVERY, "Skipping missing class path group entry %s", path);
+					Log.debug(LogCategory.DISCOVERY, "Skipping missing class path group entry %s", path);
 					continue;
 				}
 
-				paths.add(LoaderUtil.normalizeExistingPath(resolvedPath));
+				resolvedPath = LoaderUtil.normalizeExistingPath(resolvedPath);
+
+				if (cp.contains(resolvedPath)) {
+					paths.add(resolvedPath);
+				}
 			}
 
 			if (paths.size() < 2) {
-				Log.warn(LogCategory.DISCOVERY, "Skipping class path group with no effect: %s", group);
+				Log.debug(LogCategory.DISCOVERY, "Skipping class path group with no effect: %s", group);
 				continue;
 			}
 
