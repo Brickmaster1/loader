@@ -57,9 +57,6 @@ public class ForgeModClassRemapper extends Remapper {
 
 	@Override
 	public String mapInvokeDynamicMethodName(String name, String descriptor) {
-		if (name.equals("m_137492_")) {
-			System.out.println("Kill. Me.");
-		}
 		return super.mapInvokeDynamicMethodName(name, descriptor);
 	}
 
@@ -67,9 +64,6 @@ public class ForgeModClassRemapper extends Remapper {
 	public String mapMethodName(String owner, String name, String descriptor) {
 		ClassDef mapping = this.classCache.get(owner);
 		if (mapping != null) {
-			if (name.equals("m_137492_")) {
-				System.out.println("Kill. Me.");
-			}
 			String finalName = name;
 			List<MethodDef> result = mapping.getMethods().stream().filter(methodDef -> methodDef.getName(this.from).equals(finalName)).toList();
 			if (result.size() > 0) {
@@ -84,13 +78,9 @@ public class ForgeModClassRemapper extends Remapper {
 			ClassNode classNode = this.classNodeCache.get(owner);
 			if (classNode != null) {
 				if (!classNode.superName.equals("java/lang/Object")) {
-					if(owner.contains("Entity")) {
-						System.out.println("test");
-					}
 				}
 
 				if (classNode.interfaces.size() > 0) {
-					System.out.println("Test2");
 				}
 			}
 		}

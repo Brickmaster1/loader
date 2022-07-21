@@ -40,7 +40,7 @@ public class ForgeModMetadata implements LoaderModMetadata {
 				if (infoLine.contains("=")) {
 					String[] property = infoLine.split("=");
 					String key = property[0].replace("\t", "").replace("    ", "");
-					String value = property[1].replace("\"", "");
+					String value = property[1].replace("\"", "").replace("\r", "");
 					switch (key) {
 						case "modId" -> this.modid = value;
 						case "authors" -> this.authors = new SimplePerson(value);

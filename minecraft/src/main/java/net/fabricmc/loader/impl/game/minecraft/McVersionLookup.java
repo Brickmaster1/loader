@@ -43,6 +43,7 @@ import net.fabricmc.loader.impl.util.ExceptionUtil;
 import net.fabricmc.loader.impl.util.LoaderUtil;
 import net.fabricmc.loader.impl.util.SimpleClassPath;
 import net.fabricmc.loader.impl.util.SimpleClassPath.CpEntry;
+import net.fabricmc.loader.impl.util.SystemProperties;
 import net.fabricmc.loader.impl.util.version.SemanticVersionImpl;
 import net.fabricmc.loader.impl.util.version.VersionPredicateParser;
 
@@ -153,7 +154,13 @@ public final class McVersionLookup {
 			e.printStackTrace();
 		}
 
-		builder.setFromFileName(cp.getPaths().get(0).getFileName().toString());
+		// Knot hasn't loaded yet, we have to check ourselves
+		String[] split = cp.getPaths().get(0).getFileName().toString().split("-");
+		if (System.getProperty(SystemProperties.DEVELOPMENT, "false").equals("true") && split.length == 9) {
+			builder.setFromFileName(split[1] + ".");
+		} else {
+			builder.setFromFileName(cp.getPaths().get(0).getFileName().toString());
+		}
 	}
 
 	private static boolean fromVersionJson(InputStream is, McVersion.Builder builder) {
