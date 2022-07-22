@@ -12,7 +12,6 @@ plugins {
 	id 'maven-publish'
 	id 'checkstyle'
 	id 'org.cadixdev.licenser' version '0.6.1'
-	id 'https://github.com/MaldLoader/based-loom.git'
 	id 'com.github.johnrengelman.shadow' version '7.1.2'
 	id "me.modmuss50.remotesign" version "0.2.4"
 }
