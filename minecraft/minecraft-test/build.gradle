@@ -1,4 +1,4 @@
-apply plugin: "dev.architectury.loom"
+apply plugin: "com.basedloader.loom"
 
 loom {
 	runConfigs.configureEach {
