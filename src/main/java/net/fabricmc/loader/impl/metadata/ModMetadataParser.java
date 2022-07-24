@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import com.basedloader.loader.impl.metadata.ForgeModMetadata;
+import com.basedloader.metadata.ForgeModMetadata;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.lib.gson.JsonReader;

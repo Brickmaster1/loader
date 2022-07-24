@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import io.github.astrarre.amalg.mixin.MixinExtensionReborn;
 import org.objectweb.asm.commons.Remapper;
 
 import net.fabricmc.accesswidener.AccessWidenerReader;
@@ -68,7 +67,6 @@ public final class RuntimeModRemapper {
 		TinyRemapper remapper = TinyRemapper.newRemapper()
 				.withMappings(TinyRemapperMappingsHelper.create(launcher.getMappingConfiguration().getMappings(), "intermediary", launcher.getTargetNamespace()))
 				.renameInvalidLocals(false)
-				.extension(new MixinExtensionReborn())
 				.build();
 
 		try {
@@ -200,7 +198,7 @@ public final class RuntimeModRemapper {
 			throw new RuntimeException("No remapClasspathFile provided");
 		}
 
-		String content = new String(Files.readAllBytes(Paths.get(remapClasspathFile)), StandardCharsets.UTF_8);
+		String content = Files.readString(Paths.get(remapClasspathFile));
 
 		return Arrays.stream(content.split(File.pathSeparator))
 				.map(Paths::get)

@@ -236,15 +236,20 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 						URL url = parentClassLoader.getResource(fileName);
 
 						if (url == null) { // no .class file
-							String msg = "can't find class " + name;
-							if (LOG_CLASS_LOAD_ERRORS) Log.warn(LogCategory.KNOT, msg);
-							throw new ClassNotFoundException(msg);
+							try {
+								c = PLATFORM_CLASS_LOADER.loadClass(name);
+								if (LOG_CLASS_LOAD) Log.info(LogCategory.KNOT, "loaded resources-less class %s from platform class loader");
+							} catch (ClassNotFoundException e) {
+								if (LOG_CLASS_LOAD_ERRORS) Log.warn(LogCategory.KNOT, "can't find class %s", name);
+								throw e;
+							}
 						} else if (!isValidParentUrl(url, fileName)) { // available, but restricted
 							// The class would technically be available, but the game provider restricted it from being
 							// loaded by setting validParentUrls and not including "url". Typical causes are:
 							// - accessing classes too early (game libs shouldn't be used until Loader is ready)
 							// - using jars that are only transient (deobfuscation input or pass-through installers)
-							String msg = String.format("can't load class %s at %s as it hasn't been exposed to the game (yet?)", name, getCodeSource(url, fileName));
+							String msg = String.format("can't load class %s at %s as it hasn't been exposed to the game (yet? The system property "+SystemProperties.PATH_GROUPS+" may not be set correctly in-dev)",
+									name, getCodeSource(url, fileName));
 							if (LOG_CLASS_LOAD_ERRORS) Log.warn(LogCategory.KNOT, msg);
 							throw new ClassNotFoundException(msg);
 						} else { // load from system cl
@@ -274,7 +279,7 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 	private boolean isValidParentUrl(URL url, String fileName) {
 		if (url == null) return false;
 		if (DISABLE_ISOLATION) return true;
-		if (url.getProtocol().equals("jrt")) return true;
+		if (!hasRegularCodeSource(url)) return true;
 
 		Path codeSource = getCodeSource(url, fileName);
 		Set<Path> validParentCodeSources = this.validParentCodeSources;
@@ -295,7 +300,7 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 			String fileName = LoaderUtil.getClassFileName(name);
 			URL url = classLoader.getResource(fileName);
 
-			if (url != null && !url.getProtocol().equals("jrt")) {
+			if (url != null && hasRegularCodeSource(url)) {
 				Path codeSource = getCodeSource(url, fileName);
 				String[] prefixes = allowedPrefixes.get(codeSource);
 
@@ -360,7 +365,7 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 	private Metadata getMetadata(String name) {
 		String fileName = LoaderUtil.getClassFileName(name);
 		URL url = classLoader.getResource(fileName);
-		if (url == null) return Metadata.EMPTY;
+		if (url == null || !hasRegularCodeSource(url)) return Metadata.EMPTY;
 
 		return getMetadata(getCodeSource(url, fileName));
 	}
@@ -553,6 +558,10 @@ public final class KnotClassDelegate<T extends ClassLoader & ClassLoaderAccess> 
 
 			return outputStream.toByteArray();
 		}
+	}
+
+	private static boolean hasRegularCodeSource(URL url) {
+		return url.getProtocol().equals("file") || url.getProtocol().equals("jar");
 	}
 
 	private static Path getCodeSource(URL url, String fileName) {
